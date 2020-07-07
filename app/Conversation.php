@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Events\MessageCreated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,13 @@ final class Conversation extends Model
     protected $fillable = ['id', 'sender_id', 'target_id', 'message', 'read', 'created_at', 'updated_at'];
 
     protected $casts = ['read' => 'boolean'];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(fn(self $conversation) => MessageCreated::broadcast($conversation));
+    }
 
     public function sender():BelongsTo
     {
