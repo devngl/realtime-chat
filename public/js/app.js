@@ -1973,6 +1973,10 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
     contacts: {
       type: Object,
       "default": {}
+    },
+    userId: {
+      type: Number,
+      required: true
     }
   },
   data: function data() {
@@ -1982,9 +1986,29 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
       message: ''
     };
   },
+  mounted: function mounted() {
+    this.watchForMessages();
+  },
   methods: {
-    loadMessagesWithContact: function loadMessagesWithContact(contact) {
+    watchForMessages: function watchForMessages() {
       var _this = this;
+
+      var topic = encodeURIComponent("https://example.com/chat/users/".concat(this.userId, "/messages"));
+      var eventSource = new EventSource('http://localhost:8083/.well-known/mercure?topic=' + topic, {
+        withCredentials: true
+      });
+      eventSource.addEventListener('message', function (messageEvent) {
+        if (!_this.selectedContact) return;
+        var eventData = JSON.parse(messageEvent.data);
+        var conversation = eventData.data.conversation;
+
+        if (conversation.sender_id === _this.selectedContact.key) {
+          _this.appendMessage(false, conversation.message, _this.userId);
+        }
+      });
+    },
+    loadMessagesWithContact: function loadMessagesWithContact(contact) {
+      var _this2 = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default.a.mark(function _callee() {
         var response;
@@ -1992,13 +2016,13 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
           while (1) {
             switch (_context.prev = _context.next) {
               case 0:
-                _this.selectedContact = contact;
+                _this2.selectedContact = contact;
                 _context.next = 3;
                 return axios.get("/api/messages/".concat(contact.key));
 
               case 3:
                 response = _context.sent;
-                _this.messages = response.data.data;
+                _this2.messages = response.data.data;
 
               case 5:
               case "end":
@@ -2008,15 +2032,24 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
         }, _callee);
       }))();
     },
+    appendMessage: function appendMessage(isMyMessage, message, targetId) {
+      this.messages.unshift({
+        id: null,
+        is_my_message: isMyMessage,
+        message: message,
+        read: true,
+        target_id: targetId
+      });
+    },
     sendMessageToContact: function sendMessageToContact() {
-      var _this2 = this;
+      var _this3 = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default.a.mark(function _callee2() {
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default.a.wrap(function _callee2$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
-                if (!(!_this2.selectedContact || !_this2.message.length)) {
+                if (!(!_this3.selectedContact || !_this3.message.length)) {
                   _context2.next = 2;
                   break;
                 }
@@ -2024,19 +2057,13 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
                 return _context2.abrupt("return");
 
               case 2:
-                _this2.messages.unshift({
-                  id: null,
-                  is_my_message: true,
-                  message: _this2.message,
-                  read: true,
-                  target_id: _this2.selectedContact.key
-                });
+                _this3.appendMessage(true, _this3.message, _this3.selectedContact.key);
 
                 _context2.prev = 3;
                 _context2.next = 6;
-                return axios.put("/api/messages/".concat(_this2.selectedContact.key), {
-                  target: _this2.selectedContact.key,
-                  message: _this2.message
+                return axios.put("/api/messages/".concat(_this3.selectedContact.key), {
+                  target: _this3.selectedContact.key,
+                  message: _this3.message
                 });
 
               case 6:
@@ -2047,11 +2074,12 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
                 _context2.prev = 8;
                 _context2.t0 = _context2["catch"](3);
 
-                _this2.messages.shift();
+                // something failed, remove message
+                _this3.messages.shift();
 
               case 11:
                 _context2.prev = 11;
-                _this2.message = '';
+                _this3.message = '';
                 return _context2.finish(11);
 
               case 14:
@@ -20510,7 +20538,10 @@ var render = function() {
             attrs: { type: "button" },
             on: {
               click: function($event) {
-                return _vm.loadMessagesWithContact({ key: key, name: contact })
+                _vm.loadMessagesWithContact({
+                  key: parseInt(key),
+                  name: contact
+                })
               }
             }
           },

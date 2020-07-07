@@ -30,7 +30,7 @@
       <button type="button"
               v-for="(contact, key) in contacts"
               class="w-full rounded border-gray-400 bg-gray-300 m-2 h-8 flex content-center flex-wrap p-3"
-              @click="loadMessagesWithContact({key, name: contact})">
+              @click="loadMessagesWithContact({key: parseInt(key), name: contact})">
         <span>{{ contact }}</span>
       </button>
     </div>
@@ -42,6 +42,7 @@
     name: 'chat-component',
     props: {
       contacts: { type: Object, default: ({}) },
+      userId: { type: Number, required: true },
     },
     data () {
       return {
@@ -50,24 +51,51 @@
         message: '',
       }
     },
+    mounted () {
+      this.watchForMessages()
+    },
     methods: {
+      watchForMessages () {
+        let topic = encodeURIComponent(`https://example.com/chat/users/${this.userId}/messages`)
+
+        const eventSource = new EventSource('http://localhost:8083/.well-known/mercure?topic=' + topic, {
+          withCredentials: true
+        })
+
+        eventSource.addEventListener('message', (messageEvent) => {
+          if (!this.selectedContact) return
+
+          const eventData = JSON.parse(messageEvent.data)
+
+          let conversation = eventData.data.conversation
+          if (conversation.sender_id === this.selectedContact.key) {
+            this.appendMessage(false, conversation.message, this.userId)
+          }
+        })
+      },
+
       async loadMessagesWithContact (contact) {
         this.selectedContact = contact
         const response = await axios.get(`/api/messages/${contact.key}`)
         this.messages = response.data.data
       },
+
+      appendMessage (isMyMessage, message, targetId) {
+        this.messages.unshift({
+          id: null,
+          is_my_message: isMyMessage,
+          message,
+          read: true,
+          target_id: targetId,
+        })
+      },
+
       async sendMessageToContact () {
         if (!this.selectedContact || !this.message.length) {
           return
         }
 
-        this.messages.unshift({
-          id: null,
-          is_my_message: true,
-          message: this.message,
-          read: true,
-          target_id: this.selectedContact.key,
-        })
+        this.appendMessage(true, this.message, this.selectedContact.key)
 
         try {
           await axios.put(`/api/messages/${this.selectedContact.key}`, {
@@ -75,6 +103,7 @@
             message: this.message,
           })
         } catch (e) {
+          // something failed, remove message
           this.messages.shift()
         } finally {
           this.message = ''
