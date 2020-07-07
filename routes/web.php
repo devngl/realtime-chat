@@ -15,11 +15,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
-Route::get('/', ChatController::class);
+Route::middleware(['auth', 'mercure.auth'])->group(static function () {
+    Route::get('/', ChatController::class);
+});
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-Route::namespace('App\Http\Controllers')->group(function() {
+Route::namespace('App\Http\Controllers')->group(static function () {
     Auth::routes();
 });
