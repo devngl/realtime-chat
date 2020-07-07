@@ -14,10 +14,12 @@
         "guzzlehttp/guzzle": "^6.3",
         "laravel/framework": "^7.0",
         "laravel/tinker": "^2.0",
-        "laravel/ui": "^2.1"
+        "laravel/ui": "^2.1",
+        "mvanduijker/laravel-mercure-broadcaster": "^3.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.7",
+        "beyondcode/laravel-dump-server": "^1.4",
         "facade/ignition": "^2.0",
         "fzaninotto/faker": "^1.9.1",
         "laravel-frontend-presets/tailwindcss": "^4.1",

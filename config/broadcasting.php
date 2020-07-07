@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', null),
+    'default' => env('BROADCAST_DRIVER', 'mercure'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,6 +52,12 @@ return [
 
         'null' => [
             'driver' => 'null',
+        ],
+
+        'mercure' => [
+            'driver' => 'mercure',
+            'url' => env('MERCURE_URL', 'http://localhost:8083/.well-known/mercure'),
+            'secret' => env('MERCURE_SECRET', '!ChangeMe!'),
         ],
     ],
 ];
